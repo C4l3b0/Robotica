@@ -1,0 +1,9 @@
+# Ignorar el entorno virtual
+venv/
+env/
+.env/
+
+# Otros archivos que no deberías subir
+__pycache__/
+*.pyc
+.DS_Store
