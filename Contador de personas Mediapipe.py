@@ -1,79 +1,69 @@
+import cv2
 import mediapipe as mp
+import numpy as np
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 
-# Definir las opciones usando la ruta completa y segura
-base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
-options = vision.HandLandmarkerOptions(
-    base_options=base_options,
-    running_mode=vision.RunningMode.VIDEO,
-    num_hands=2
-)
-# --- Funciones de Lógica de Señas ---
-# Nota: En MediaPipe, Y crece hacia ABAJO y X crece hacia la DERECHA.
-def check_direction(landmarks):
-    # Usamos el dedo índice: TIP (8) y MCP (5)
-    tip = landmarks[8]
-    mcp = landmarks[5]
-    
-    # Calculamos distancia euclidiana como umbral de sensibilidad
-    distance = math.sqrt((tip.x - mcp.x)**2 + (tip.y - mcp.y)**2)
-    threshold = distance * 0.8
-
-    if tip.y < mcp.y - threshold:
-        return "Up"
-    elif tip.y > mcp.y + threshold:
-        return "Down"
-    elif tip.x < mcp.x - threshold:
-        return "Left"
-    elif tip.x > mcp.x + threshold:
-        return "Right"
-    return None
-
-# --- Configuración del Landmarker ---
-options = HandLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path='hand_landmarker.task'),
-    running_mode=VisionRunningMode.VIDEO, # Modo específico para video/camara
-    num_hands=2,
-    min_hand_detection_confidence=0.5,
-    min_hand_presence_confidence=0.5,
-    min_tracking_confidence=0.5
+# Realizamos las configuraciones del detector de personas
+options = vision.ObjectDetectorOptions(
+    base_options = python.BaseOptions(model_asset_path = "efficientdet_lite0.tflite"),
+    running_mode = vision.RunningMode.IMAGE, 
+    max_results = 10, 
+    score_threshold = 0.2
 )
 
-# --- Bucle Principal ---
-cam = cv2.VideoCapture(0)
+# Inicializamos el detector
+detector = vision.ObjectDetector.create_from_options(options)
 
-with HandLandmarker.create_from_options(options) as landmarker:
-    while cam.isOpened():
-        ret, frame = cam.read()
-        if not ret: break
+# Inicialización de la captura de video
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
-        frame = cv2.flip(frame, 1)
-        # Convertir BGR a RGB
-        rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+if not cap.isOpened():
+    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
+
+print("Iniciando conteo de weones")
+
+while cap.isOpened():
+    success, frame = cap.read()
+    if not success:
+        break
+    frame = cv2.flip(frame, 1)
+    h, w, _ = frame.shape   
+    # Convertimos el video BGR a RGB
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+
+    # Realizamos la detección
+    detection_result = detector.detect(mp_frame)
+
+    personas_actuales = [d for d in detection_result.detections if d.categories[0].category_name == "person"]
+    contador_personas = len(personas_actuales)
+
+    # Procesamos las detecciones para dibujar los cuadros
+    for detection in personas_actuales:
+        category = detection.categories[0]
+        bbox = detection.bounding_box
+        coords = np.array([bbox.origin_x, bbox.origin_y, bbox.width, bbox.height], dtype=int)
+        x, y, w_box, h_box = coords
+
+        # Dibujamos el cuadrado para cada persona
+        cv2.rectangle(frame, (x, y), (x + w_box, y + h_box), (0, 255, 0), 2)
         
-        # Necesitamos un timestamp en milisegundos para el modo VIDEO
-        frame_timestamp_ms = int(time.time() * 1000)
-        
-        # Procesar frame
-        result = landmarker.detect_for_video(rgb_frame, frame_timestamp_ms)
+        # Etiqueta de confianza
+        display_text = f"P: {round(category.score, 2)}"
+        cv2.putText(frame, display_text, (x, y - 10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
-        # Dibujar y procesar lógica
-        if result.hand_landmarks:
-            for hand_landmarks in result.hand_landmarks:
-                # Dibujar conexiones (opcional, usando la utilidad antigua que sigue siendo compatible)
-                # O puedes iterar y dibujar círculos manualmente con cv2.circle
-                
-                # Lógica de dirección
-                direction = check_direction(hand_landmarks)
-                if direction:
-                    cv2.putText(frame, direction, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                    print(f"Comando Drone: {direction}")
+    # Colacamos el contador de personas
+    cv2.putText(frame, f"Personas: {contador_personas}", (w - 200, 40), 
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
-        cv2.imshow("Hand Control - Tasks API", frame)
-        
-        if cv2.waitKey(1) & 0xFF == 27:
-            break
+    # Mostramos el video en vivo
+    cv2.imshow('Deteccion de Personas con Contador', frame)
 
-cam.release()
+    if cv2.waitKey(1) & 0xFF == 27:
+        break
+
+detector.close()
+cap.release()
 cv2.destroyAllWindows()
