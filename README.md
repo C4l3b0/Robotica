@@ -39,5 +39,11 @@ pip install -r requirements.txt
 Para iniciar la implementación principal del dron, ejecuta:
 
 ```bash
-python Implementacion.py
+python codigo_dron.py
+```
+### 4. Prueba en computadores
+Si se quiere porbar el codigo sin el uso de algun dron, ejecute:
+
+```bash
+python codigo_computador.py
 ```
