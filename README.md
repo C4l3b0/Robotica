@@ -41,11 +41,3 @@ Para iniciar la implementación principal del dron, ejecuta:
 ```bash
 python Implementacion.py
 ```
-
-## Estructura de Archivos
-
-- `Implementacion.py`: Script principal de control y detección integrada.
-- `Contador de personas Mediapipe.py`: Prueba de conteo de personas usando Mediapipe.
-- `Contador de personas YOLO26.py`: Prueba de conteo de personas usando YOLOv8.
-- `Detector Apriltags.py`: Prueba de detección de AprilTags.
-- `Implementacion_Deteccion_Integrada.py`: Versión alternativa de la implementación integrada.
