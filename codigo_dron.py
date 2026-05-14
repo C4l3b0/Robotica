@@ -179,10 +179,7 @@ while True:
     cv2.putText(frame, "TELEMETRIA", (w-tw, h-60), 0, 0.5, (255, 128, 0), 1)
     cv2.putText(frame, f"Bateria: {battery}%", (w-tw, h-45), 0, 0.4, (255, 255, 255), 1)
     cv2.putText(frame, f"Altura: {tello.get_height()/100:.2f} m", (w-tw, h-30), 0, 0.4, (255, 255, 255), 1)
-   
     tvuelo = int(time.time()- tinicial)
-   
-    #cv2.putText(frame, f"Tiempo: {tello.get_flight_time()} s", (w-tw, h-15), 0, 0.4, (255, 255, 255), 1)
     cv2.putText(frame, f"Tiempo: {tvuelo} s", (w-tw, h-15), 0, 0.4, (255, 255, 255), 1)
     # 7. DISPLAY (NO convertir a RGB, imshow usa BGR)
     cv2.imshow("TELLO MISSION CONTROL", cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))
